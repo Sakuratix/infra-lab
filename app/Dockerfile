@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.12-slim AS test
+FROM python:3.15-slim AS test
 WORKDIR /src
 RUN pip install --no-cache-dir pytest==8.3.3
 COPY . .
 RUN pytest -q
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION} PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 # pull in Debian security fixes that landed after the base image was built
