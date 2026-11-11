@@ -1,0 +1,6 @@
+apiVersion: v2
+name: infra-lab
+description: Demo web service with probes, HPA, ingress and Prometheus scraping
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

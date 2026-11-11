@@ -1,0 +1,18 @@
+# Telegram receiver: put the bot token into a file mounted as a secret,
+# never into git. Locally everything goes to the null receiver.
+route:
+  receiver: "null"
+  group_by: [alertname]
+  group_wait: 30s
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: "null"   # switch to "telegram" in a real environment
+
+receivers:
+  - name: "null"
+  # - name: telegram
+  #   telegram_configs:
+  #     - bot_token_file: /etc/alertmanager/secrets/telegram_token
+  #       chat_id: -1001234567890
+  #       parse_mode: HTML

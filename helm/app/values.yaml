@@ -1,0 +1,34 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/sakuratix/infra-lab
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: nginx
+  host: infra-lab.example.com
+  tls: true
+  clusterIssuer: letsencrypt-prod
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 250m, memory: 128Mi }
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: false     # needs kube-prometheus-stack CRDs
+  interval: 15s
+
+podDisruptionBudget:
+  minAvailable: 1

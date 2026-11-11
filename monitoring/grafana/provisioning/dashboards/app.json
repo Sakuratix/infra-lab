@@ -1,0 +1,32 @@
+{
+  "title": "infra-lab · RED",
+  "uid": "infra-lab-red",
+  "schemaVersion": 39,
+  "time": { "from": "now-30m", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries", "title": "Requests per second",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum by (status) (rate(http_requests_total[1m]))", "legendFormat": "{{status}}" }]
+    },
+    {
+      "type": "timeseries", "title": "Error ratio",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [{ "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)" }]
+    },
+    {
+      "type": "timeseries", "title": "Latency p50 / p95",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" }
+      ]
+    }
+  ]
+}

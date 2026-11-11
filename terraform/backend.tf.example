@@ -1,0 +1,16 @@
+# Remote state in Yandex Object Storage. Copy to backend.tf and run:
+#   terraform init -backend-config="access_key=..." -backend-config="secret_key=..."
+terraform {
+  backend "s3" {
+    endpoints = { s3 = "https://storage.yandexcloud.net" }
+    bucket    = "infra-lab-tfstate"
+    key       = "envs/dev/terraform.tfstate"
+    region    = "ru-central1"
+
+    skip_region_validation      = true
+    skip_credentials_validation = true
+    skip_requesting_account_id  = true
+    skip_s3_checksum            = true
+    use_lockfile                = true
+  }
+}

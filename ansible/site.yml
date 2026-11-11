@@ -1,0 +1,7 @@
+---
+- name: Baseline for Ubuntu servers
+  hosts: servers
+  become: true
+  roles:
+    - hardening
+    - node_exporter
