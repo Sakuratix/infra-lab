@@ -22,7 +22,7 @@ jobs:
       - run: pip install ruff pytest
       - run: ruff check . && ruff format --check .
       - run: pytest -q app/tests
-      - uses: hadolint/hadolint-action@v3.1.0
+      - uses: hadolint/hadolint-action@v3.5.0
         with: { dockerfile: app/Dockerfile }
 
   iac:
