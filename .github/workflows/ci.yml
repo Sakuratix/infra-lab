@@ -18,7 +18,7 @@ jobs:
   app:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install ruff pytest
@@ -31,7 +31,7 @@ jobs:
       run:
         working-directory: ansible
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: yamllint + syntax check
@@ -47,7 +47,7 @@ jobs:
     env:
       PROMTOOL: docker run --rm -v ${{ github.workspace }}:/w -w /w --entrypoint promtool prom/prometheus:v3.1.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: $PROMTOOL check rules monitoring/alerts.yml
       - run: $PROMTOOL test rules monitoring/tests/alerts_test.yml
 
