@@ -8,15 +8,6 @@ groups:
         annotations:
           summary: "app is down on {{ $labels.instance }}"
 
-      - alert: HighErrorRate
-        expr: |
-          sum(rate(http_requests_total{status=~"5.."}[5m]))
-            / clamp_min(sum(rate(http_requests_total[5m])), 1e-9) > 0.05
-        for: 5m
-        labels: { severity: warning }
-        annotations:
-          summary: "more than 5% of requests fail"
-
       - alert: HighLatencyP95
         expr: |
           histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 0.5
@@ -24,3 +15,34 @@ groups:
         labels: { severity: warning }
         annotations:
           summary: "p95 latency above 500ms"
+
+  # Availability SLO: 99.5% of requests succeed over 30 days (error budget 0.5%).
+  # Multi-window burn-rate alerts from the Google SRE workbook instead of a fixed "5% errors"
+  # threshold: page fast when the budget would be gone in ~2 days, open a ticket when in ~5 days,
+  # and stay quiet for short blips that don't threaten the SLO.
+  - name: slo
+    rules:
+      - record: slo:http_errors:ratio_rate5m
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)
+      - record: slo:http_errors:ratio_rate30m
+        expr: sum(rate(http_requests_total{status=~"5.."}[30m])) / clamp_min(sum(rate(http_requests_total[30m])), 1e-9)
+      - record: slo:http_errors:ratio_rate1h
+        expr: sum(rate(http_requests_total{status=~"5.."}[1h])) / clamp_min(sum(rate(http_requests_total[1h])), 1e-9)
+      - record: slo:http_errors:ratio_rate6h
+        expr: sum(rate(http_requests_total{status=~"5.."}[6h])) / clamp_min(sum(rate(http_requests_total[6h])), 1e-9)
+
+      - alert: ErrorBudgetBurnFast
+        # 14.4x burn: 2% of the monthly budget gone in 1h
+        expr: slo:http_errors:ratio_rate1h > (14.4 * 0.005) and slo:http_errors:ratio_rate5m > (14.4 * 0.005)
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "error budget burning 14x too fast ({{ $value | humanizePercentage }} errors over 1h)"
+
+      - alert: ErrorBudgetBurnSlow
+        # 6x burn: 5% of the monthly budget gone in 6h
+        expr: slo:http_errors:ratio_rate6h > (6 * 0.005) and slo:http_errors:ratio_rate30m > (6 * 0.005)
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "error budget burning 6x too fast ({{ $value | humanizePercentage }} errors over 6h)"

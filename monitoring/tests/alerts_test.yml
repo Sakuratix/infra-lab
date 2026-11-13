@@ -17,37 +17,55 @@ tests:
           - exp_labels: { severity: critical, job: app, instance: "app:8080" }
             exp_annotations: { summary: "app is down on app:8080" }
 
-  - name: HighErrorRate fires at ~9% errors
+  - name: 10% errors pages within minutes (fast burn)
     interval: 1m
     input_series:
-      - series: 'http_requests_total{method="GET",path="/",status="200"}'
-        values: "0+100x20"
-      - series: 'http_requests_total{method="GET",path="/",status="500"}'
-        values: "0+10x20"
+      - { series: 'http_requests_total{method="GET",path="/",status="200"}', values: "0+90x60" }
+      - { series: 'http_requests_total{method="GET",path="/",status="500"}', values: "0+10x60" }
     alert_rule_test:
       - eval_time: 10m
-        alertname: HighErrorRate
+        alertname: ErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations: { summary: "error budget burning 14x too fast (10% errors over 1h)" }
+
+  - name: 4% errors opens a ticket, does not page (slow burn)
+    interval: 1m
+    input_series:
+      - { series: 'http_requests_total{method="GET",path="/",status="200"}', values: "0+96x120" }
+      - { series: 'http_requests_total{method="GET",path="/",status="500"}', values: "0+4x120" }
+    alert_rule_test:
+      - { eval_time: 90m, alertname: ErrorBudgetBurnFast, exp_alerts: [] }
+      - eval_time: 90m
+        alertname: ErrorBudgetBurnSlow
         exp_alerts:
           - exp_labels: { severity: warning }
-            exp_annotations: { summary: "more than 5% of requests fail" }
+            exp_annotations: { summary: "error budget burning 6x too fast (4% errors over 6h)" }
 
-  - name: HighErrorRate stays quiet at 1% errors
+  - name: 1% errors is within budget, nothing fires
     interval: 1m
     input_series:
-      - series: 'http_requests_total{method="GET",path="/",status="200"}'
-        values: "0+100x20"
-      - series: 'http_requests_total{method="GET",path="/",status="500"}'
-        values: "0+1x20"
+      - { series: 'http_requests_total{method="GET",path="/",status="200"}', values: "0+99x120" }
+      - { series: 'http_requests_total{method="GET",path="/",status="500"}', values: "0+1x120" }
     alert_rule_test:
-      - { eval_time: 10m, alertname: HighErrorRate, exp_alerts: [] }
+      - { eval_time: 90m, alertname: ErrorBudgetBurnFast, exp_alerts: [] }
+      - { eval_time: 90m, alertname: ErrorBudgetBurnSlow, exp_alerts: [] }
 
-  - name: HighErrorRate stays quiet with no traffic at all
+  - name: a 3-minute error spike does not page
     interval: 1m
     input_series:
-      - series: 'http_requests_total{method="GET",path="/",status="200"}'
-        values: "0x20"
+      - { series: 'http_requests_total{method="GET",path="/",status="200"}', values: "0+100x60" }
+      - { series: 'http_requests_total{method="GET",path="/",status="500"}', values: "0x40 0+50x3 150x16" }
     alert_rule_test:
-      - { eval_time: 10m, alertname: HighErrorRate, exp_alerts: [] }
+      - { eval_time: 60m, alertname: ErrorBudgetBurnFast, exp_alerts: [] }
+
+  - name: no traffic is not an outage
+    interval: 1m
+    input_series:
+      - { series: 'http_requests_total{method="GET",path="/",status="200"}', values: "0x60" }
+    alert_rule_test:
+      - { eval_time: 30m, alertname: ErrorBudgetBurnFast, exp_alerts: [] }
+      - { eval_time: 30m, alertname: ErrorBudgetBurnSlow, exp_alerts: [] }
 
   - name: HighLatencyP95 fires when most requests take 0.5-1s
     interval: 1m
