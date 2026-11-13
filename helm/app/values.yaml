@@ -32,3 +32,9 @@ serviceMonitor:
 
 podDisruptionBudget:
   minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx   # where the ingress controller runs
+  monitoringNamespace: monitoring   # where Prometheus runs
+  extraEgress: []                   # e.g. a database: [{to: [{ipBlock: {cidr: 10.0.0.5/32}}], ports: [{port: 5432}]}]
