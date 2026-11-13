@@ -23,7 +23,7 @@ flowchart LR
 | `helm/app/` | Чарт: RollingUpdate без простоя, readiness/liveness-пробы, `preStop` для дренажа, HPA, PDB, Ingress с cert-manager, опциональный `ServiceMonitor`, securityContext (read-only FS, drop ALL). |
 | `terraform/` | VPC и подсеть, сервисный аккаунт с минимальными ролями, Managed Kubernetes (STABLE, окно обслуживания), группа узлов (прерываемые вне prod), Managed PostgreSQL 16. Пример remote state в Object Storage. |
 | `ansible/` | Роль `hardening` (sshd без паролей и root, ufw, fail2ban, unattended-upgrades) и роль `node_exporter` с systemd-юнитом. |
-| `monitoring/` | Prometheus с алертами (сервис недоступен, доля 5xx, p95), Alertmanager с заготовкой Telegram, Grafana с дашбордом по RED-метрикам. |
+| `monitoring/` | Prometheus с алертами (сервис недоступен, доля 5xx, p95), Alertmanager с заготовкой Telegram, Grafana с дашбордом по RED-метрикам. Алерты покрыты юнит-тестами `promtool test rules` (`monitoring/tests/`): в CI проверяется, что каждый срабатывает когда должен и молчит когда не должен. |
 | `.github/workflows/` | Линтеры, тесты, валидация IaC, сборка с кэшем, Trivy, пуш в GHCR только из `main`. |
 
 ## Быстрый старт

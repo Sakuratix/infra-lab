@@ -1,0 +1,65 @@
+# Unit tests for monitoring/alerts.yml: promtool test rules monitoring/tests/alerts_test.yml
+# Each case feeds synthetic series and checks the alert fires (or stays quiet) when it should.
+rule_files: [../alerts.yml]
+evaluation_interval: 1m
+
+tests:
+  - name: AppDown fires after 1m of up == 0, not before
+    interval: 1m
+    input_series:
+      - series: 'up{job="app",instance="app:8080"}'
+        values: "1 1 0 0 0 0"
+    alert_rule_test:
+      - { eval_time: 2m, alertname: AppDown, exp_alerts: [] }   # pending
+      - eval_time: 4m
+        alertname: AppDown
+        exp_alerts:
+          - exp_labels: { severity: critical, job: app, instance: "app:8080" }
+            exp_annotations: { summary: "app is down on app:8080" }
+
+  - name: HighErrorRate fires at ~9% errors
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="GET",path="/",status="200"}'
+        values: "0+100x20"
+      - series: 'http_requests_total{method="GET",path="/",status="500"}'
+        values: "0+10x20"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighErrorRate
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations: { summary: "more than 5% of requests fail" }
+
+  - name: HighErrorRate stays quiet at 1% errors
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="GET",path="/",status="200"}'
+        values: "0+100x20"
+      - series: 'http_requests_total{method="GET",path="/",status="500"}'
+        values: "0+1x20"
+    alert_rule_test:
+      - { eval_time: 10m, alertname: HighErrorRate, exp_alerts: [] }
+
+  - name: HighErrorRate stays quiet with no traffic at all
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="GET",path="/",status="200"}'
+        values: "0x20"
+    alert_rule_test:
+      - { eval_time: 10m, alertname: HighErrorRate, exp_alerts: [] }
+
+  - name: HighLatencyP95 fires when most requests take 0.5-1s
+    interval: 1m
+    input_series:
+      - { series: 'http_request_duration_seconds_bucket{le="0.25"}', values: "0+5x30" }
+      - { series: 'http_request_duration_seconds_bucket{le="0.5"}', values: "0+10x30" }
+      - { series: 'http_request_duration_seconds_bucket{le="1.0"}', values: "0+100x30" }
+      - { series: 'http_request_duration_seconds_bucket{le="+Inf"}', values: "0+100x30" }
+    alert_rule_test:
+      - { eval_time: 5m, alertname: HighLatencyP95, exp_alerts: [] }   # pending, needs 10m
+      - eval_time: 15m
+        alertname: HighLatencyP95
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations: { summary: "p95 latency above 500ms" }

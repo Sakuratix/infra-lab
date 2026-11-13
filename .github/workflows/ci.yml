@@ -41,6 +41,16 @@ jobs:
           yamllint -d "{extends: relaxed, rules: {line-length: {max: 200}}}" .
           ansible-playbook --syntax-check -i inventory.example.ini site.yml
 
+  monitoring:
+    # Alert rules are code: lint them and unit-test that each one fires when it should.
+    runs-on: ubuntu-latest
+    env:
+      PROMTOOL: docker run --rm -v ${{ github.workspace }}:/w -w /w --entrypoint promtool prom/prometheus:v3.1.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: $PROMTOOL check rules monitoring/alerts.yml
+      - run: $PROMTOOL test rules monitoring/tests/alerts_test.yml
+
   terraform:
     uses: Sakuratix/platform-ci/.github/workflows/terraform.yml@main
     with:
@@ -56,7 +66,7 @@ jobs:
       set: ingress.enabled=true serviceMonitor.enabled=true
 
   image:
-    needs: [app, ansible, terraform, helm]
+    needs: [app, ansible, monitoring, terraform, helm]
     uses: Sakuratix/platform-ci/.github/workflows/docker.yml@main
     with:
       context: app
