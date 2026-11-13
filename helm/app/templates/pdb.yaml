@@ -5,5 +5,7 @@ metadata:
   labels: {{- include "app.labels" . | nindent 4 }}
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  # Pods that are already broken must not block a node drain.
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels: {{- include "app.selector" . | nindent 6 }}
