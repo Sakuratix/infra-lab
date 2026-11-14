@@ -1,6 +1,6 @@
 name: ci
 
-# Shared checks come from github.com/Sakuratix/platform-ci (switch @main to @v1 once that tag exists),
+# Shared checks come from github.com/Sakuratix/platform-ci (pinned to its v1 major tag),
 # repo-specific ones live here.
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
       - run: $PROMTOOL test rules monitoring/tests/alerts_test.yml
 
   terraform:
-    uses: Sakuratix/platform-ci/.github/workflows/terraform.yml@main
+    uses: Sakuratix/platform-ci/.github/workflows/terraform.yml@v1
     with:
       working-directory: terraform
     permissions:
@@ -60,14 +60,14 @@ jobs:
       pull-requests: write
 
   helm:
-    uses: Sakuratix/platform-ci/.github/workflows/helm.yml@main
+    uses: Sakuratix/platform-ci/.github/workflows/helm.yml@v1
     with:
       chart: helm/app
       set: ingress.enabled=true serviceMonitor.enabled=true
 
   image:
     needs: [app, ansible, monitoring, terraform, helm]
-    uses: Sakuratix/platform-ci/.github/workflows/docker.yml@main
+    uses: Sakuratix/platform-ci/.github/workflows/docker.yml@v1
     with:
       context: app
     permissions:
