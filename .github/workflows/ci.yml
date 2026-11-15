@@ -82,15 +82,13 @@ jobs:
         run: |
           docker build -t infra-lab:smoke app
           kind load docker-image infra-lab:smoke --name smoke
-      - name: install kubectl-why (checksum verified)
-        working-directory: ${{ runner.temp }}
+      - uses: actions/setup-go@v5
+        with: { go-version: stable, cache: false }
+      - name: install kubectl-why
+        # pinned commit: -o markdown is newer than the latest release
         run: |
-          base=https://github.com/Sakuratix/kubectl-why/releases/latest/download
-          curl -sSfLO "$base/kubectl-why_linux_amd64.tar.gz"
-          curl -sSfLO "$base/checksums.txt"
-          grep ' kubectl-why_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
-          tar xzf kubectl-why_linux_amd64.tar.gz kubectl-why
-          sudo install kubectl-why /usr/local/bin/
+          go install github.com/Sakuratix/kubectl-why/cmd/kubectl-why@6d4ef62f59fbcaf3bf71c1bca4cd718830eb9182
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: helm install --wait
         run: |
           helm upgrade --install "$RELEASE" helm/app -n "$NS" --create-namespace \
