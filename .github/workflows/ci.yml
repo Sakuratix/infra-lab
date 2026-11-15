@@ -65,8 +65,54 @@ jobs:
       chart: helm/app
       set: ingress.enabled=true serviceMonitor.enabled=true
 
+  deploy-smoke:
+    # The chart is linted elsewhere; this proves it actually comes up: build the
+    # image, install the chart into a throwaway kind cluster with --wait, hit the
+    # endpoints. If anything is unhealthy, kubectl-why explains it in the job summary.
+    needs: [app, helm]
+    runs-on: ubuntu-latest
+    env:
+      RELEASE: lab
+      NS: infra-lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1
+        with: { cluster_name: smoke }
+      - name: build and load the image
+        run: |
+          docker build -t infra-lab:smoke app
+          kind load docker-image infra-lab:smoke --name smoke
+      - name: install kubectl-why (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/Sakuratix/kubectl-why/releases/latest/download
+          curl -sSfLO "$base/kubectl-why_linux_amd64.tar.gz"
+          curl -sSfLO "$base/checksums.txt"
+          grep ' kubectl-why_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+          tar xzf kubectl-why_linux_amd64.tar.gz kubectl-why
+          sudo install kubectl-why /usr/local/bin/
+      - name: helm install --wait
+        run: |
+          helm upgrade --install "$RELEASE" helm/app -n "$NS" --create-namespace \
+            --set image.repository=infra-lab --set image.tag=smoke --set image.pullPolicy=Never \
+            --wait --timeout 3m
+      - name: smoke test through the Service
+        run: |
+          kubectl -n "$NS" port-forward "svc/$RELEASE-infra-lab" 8080:80 &
+          for _ in $(seq 20); do curl -sf localhost:8080/readyz && break; sleep 1; done
+          curl -sf localhost:8080/healthz
+          root=$(curl -sf localhost:8080/) && [[ $root == *'"service": "infra-lab"'* ]]
+          metrics=$(curl -sf localhost:8080/metrics) && grep -q '^http_requests_total' <<<"$metrics"
+      - name: kubectl why
+        if: always()
+        run: |
+          {
+            echo "## Deploy smoke test"
+            kubectl why "deploy/$RELEASE-infra-lab" -n "$NS" -o markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
   image:
-    needs: [app, ansible, monitoring, terraform, helm]
+    needs: [app, ansible, monitoring, terraform, helm, deploy-smoke]
     uses: Sakuratix/platform-ci/.github/workflows/docker.yml@v1
     with:
       context: app
