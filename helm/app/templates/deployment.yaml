@@ -20,6 +20,8 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.service.targetPort }}"
     spec:
+      serviceAccountName: {{ include "app.fullname" . }}
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
