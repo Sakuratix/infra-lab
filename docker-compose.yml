@@ -10,6 +10,7 @@ services:
       args: { APP_VERSION: local }
     ports: ["8080:8080"]
     restart: unless-stopped
+    # health comes from the image's own HEALTHCHECK (GET /healthz)
 
   prometheus:
     image: prom/prometheus:v3.1.0   # same version CI tests the alert rules with
@@ -17,13 +18,23 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
     ports: ["9090:9090"]
-    depends_on: [app, alertmanager]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      retries: 6
+    depends_on:
+      app: { condition: service_healthy }
+      alertmanager: { condition: service_healthy }
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports: ["9093:9093"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
+      interval: 10s
+      retries: 6
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -33,4 +44,5 @@ services:
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     ports: ["3000:3000"]
-    depends_on: [prometheus]
+    depends_on:
+      prometheus: { condition: service_healthy }

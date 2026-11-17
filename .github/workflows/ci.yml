@@ -50,6 +50,19 @@ jobs:
       - uses: actions/checkout@v4
       - run: $PROMTOOL check rules monitoring/alerts.yml
       - run: $PROMTOOL test rules monitoring/tests/alerts_test.yml
+      - name: the local stand comes up healthy
+        run: |
+          docker compose up -d --build --wait --wait-timeout 180
+          docker compose ps
+          # Prometheus scrapes every 15s: wait until it has actually seen the app up
+          for _ in $(seq 30); do
+            up=$(curl -sf 'localhost:9090/api/v1/query?query=up%7Bjob%3D%22app%22%7D' || true)
+            [[ $up == *'"1"]'* ]] && { echo "app is up in Prometheus"; exit 0; }
+            sleep 2
+          done
+          echo "Prometheus never saw the app up: $up"; exit 1
+      - if: failure()
+        run: docker compose logs --tail 50
 
   terraform:
     uses: Sakuratix/platform-ci/.github/workflows/terraform.yml@v1
