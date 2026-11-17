@@ -30,6 +30,12 @@ serviceMonitor:
   enabled: false     # needs kube-prometheus-stack CRDs
   interval: 15s
 
+topologySpread:
+  enabled: true
+  topologyKey: topology.kubernetes.io/zone
+  maxSkew: 1
+  whenUnsatisfiable: ScheduleAnyway   # DoNotSchedule for a hard guarantee on multi-zone clusters
+
 podDisruptionBudget:
   minAvailable: 1
 

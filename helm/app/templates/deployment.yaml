@@ -25,6 +25,19 @@ spec:
         runAsUser: 10001
         seccompProfile: { type: RuntimeDefault }
       terminationGracePeriodSeconds: 20
+      {{- with .Values.topologySpread }}
+      {{- if .enabled }}
+      # spread replicas across zones so losing one zone doesn't take the service down;
+      # ScheduleAnyway keeps single-zone clusters (kind, k3s) working
+      topologySpreadConstraints:
+        - maxSkew: {{ .maxSkew }}
+          topologyKey: {{ .topologyKey }}
+          whenUnsatisfiable: {{ .whenUnsatisfiable }}
+          labelSelector:
+            matchLabels: {{- include "app.selector" $ | nindent 14 }}
+          matchLabelKeys: [pod-template-hash]
+      {{- end }}
+      {{- end }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
