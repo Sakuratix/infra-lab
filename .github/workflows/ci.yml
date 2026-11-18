@@ -95,7 +95,7 @@ jobs:
         run: |
           docker build -t infra-lab:smoke app
           kind load docker-image infra-lab:smoke --name smoke
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with: { go-version: stable, cache: false }
       - name: install kubectl-why
         # pinned commit: -o markdown is newer than the latest release
